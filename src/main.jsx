@@ -13,7 +13,7 @@ AOS.init({
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <BrowserRouter basename="/">
+    <BrowserRouter basename="/syntropix-ai-frontend">
       <App />
     </BrowserRouter>
   </StrictMode>

@@ -157,9 +157,9 @@ const ToolBlock = ({ selected, data, id, onDelete, onSettings }) => {
       {/* 只有左侧入口连接点 */}
       <Handle
         type="target"
-        position="left"
+        position="top"
         className="w-3 h-3 bg-green-400 border-2 border-white"
-        style={{ left: -10 }}
+        style={{ top: -10 }}
       />
     </motion.div>
   );

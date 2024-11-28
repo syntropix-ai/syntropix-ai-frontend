@@ -13,6 +13,7 @@ import Team from './pages/Main/team';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import InputTextArea from './components/Agent/InputTextArea';
 import Flow from './components/Agent/Flow';
+import Agent from './pages/Main/agent';
 
 function App() {
   const [count, setCount] = useState(0)
@@ -26,14 +27,16 @@ function App() {
   return (
     <>
       <Header />
+      <main className="pt-20">
       <Routes>
         <Route path="/" element={<Main />} />
         <Route path="/products" element={<Main />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/teams" element={<Team />} />
         <Route path="/services" element={<Main />} />
-        <Route path="/blog" element={<Flow />} />
-      </Routes>
+        <Route path="/blog" element={<Agent />} />
+        </Routes>
+      </main>
       <Footer />
     </>
   );

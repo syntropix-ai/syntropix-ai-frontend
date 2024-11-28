@@ -162,16 +162,16 @@ const AgentBlock = ({ selected, data, id, onDelete, onSettings }) => {
       </div>
 
       <Handle
-        type="source"
-        position="right"
+        type="target"
+        position="top"
         className={`w-3 h-3 bg-${statusStyles[status].color}-400 border-2 border-white`}
-        style={{ right: -10 }}
+        style={{ top: -10 }}
       />
       <Handle
-        type="target"
-        position="left"
+        type="source"
+        position="bottom"
         className={`w-3 h-3 bg-${statusStyles[status].color}-400 border-2 border-white`}
-        style={{ left: -10 }}
+        style={{ bottom: -10 }}
       />
     </motion.div>
   );

@@ -61,9 +61,9 @@ const InputBlock = ({ selected, data, id, onDelete }) => {
       {/* 输出连接点 */}
       <Handle
         type="source"
-        position="right"
+        position="bottom"
         className="w-3 h-3 bg-blue-400 border-2 border-white"
-        style={{ right: -10 }}
+        style={{ bottom: -10 }}
       />
     </motion.div>
   );

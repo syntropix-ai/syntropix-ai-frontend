@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ReactFlow,
   useNodesState,
@@ -34,72 +34,10 @@ const initialNodes = [
     position: { x: 50, y: 200 },
     data: { label: "Input Node" },
   },
-  {
-    id: "2",
-    type: "agent",
-    position: { x: 300, y: 200 },
-    data: {
-      name: "Agent 1",
-      description: "这是一个示例 Agent",
-      systemMessage: "你是一个助手",
-      modelName: "gpt-4",
-    },
-  },
-  {
-    id: "3",
-    type: "tool",
-    position: { x: 600, y: 200 },
-    data: {
-      name: "搜索工具",
-      description: "用于网络搜索的工具",
-      type: "search_tool",
-      args: {
-        api_key: "",
-        max_results: "10",
-        language: "zh",
-      },
-    },
-  },
-  {
-    id: "4",
-    type: "tool",
-    position: { x: 600, y: 400 },
-    data: {
-      name: "计算器工具",
-      description: "用于执行数学计算的工具",
-      type: "calculator_tool",
-      args: {
-        precision: "2",
-        allow_complex: "false",
-      },
-    },
-  },
 ];
 
 // 初始边数据
-const initialEdges = [
-  {
-    id: "e1-2",
-    source: "1",
-    target: "2",
-    type: "default",
-    style: { stroke: "#2563eb", strokeWidth: 2 },
-  },
-  {
-    id: "e2-3",
-    source: "2",
-    target: "3",
-    type: "bidirectional",
-    data: { animation: "backward" },
-  },
-  {
-    id: "e2-4",
-    source: "2",
-    target: "4",
-    type: "bidirectional",
-    data: { animation: "backward" },
-  },
-];
+const initialEdges = [];
 
 // 添加布局函数 (在 Flow 组件外)
 const getLayoutedElements = (nodes, edges, direction = "LR") => {
@@ -159,21 +97,62 @@ const Flow = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
+  // 修改连线处理函数
   const onConnect = useCallback(
-    (params) => setEdges((eds) => addEdge(params, eds)),
-    []
+    (params) => {
+      // 获取源节点和目标节点的类型
+      const sourceNode = nodes.find((node) => node.id === params.source);
+      const targetNode = nodes.find((node) => node.id === params.target);
+
+      console.log("Source node:", sourceNode); // 添加调试日志
+      console.log("Target node:", targetNode); // 添加调试日志
+
+      // 检查 input node 的连接限制
+      if (sourceNode?.type === "custom") {
+        // input 只能作为源节点连接到 agent
+        if (targetNode?.type !== "agent") {
+          console.warn("Input node can only connect to agent nodes");
+          return;
+        }
+
+        // 检查是否已经存在连接
+        const existingInputEdges = edges.filter(
+          (edge) => edge.source === sourceNode.id
+        );
+        if (existingInputEdges.length > 0) {
+          console.warn("Input node can only connect to one agent");
+          return;
+        }
+      }
+
+      // 检查是否需要双向连线
+      const needsBidirectional =
+        (sourceNode?.type === "agent" && targetNode?.type === "agent") ||
+        (sourceNode?.type === "agent" && targetNode?.type === "tool") ||
+        (sourceNode?.type === "tool" && targetNode?.type === "agent");
+
+      // 创建新的边
+      const newEdge = {
+        ...params,
+        id: `e${params.source}-${params.target}`,
+        type: needsBidirectional ? "bidirectional" : "default",
+        style: { stroke: "#2563eb", strokeWidth: 2 },
+        data: needsBidirectional ? { animation: "backward" } : {},
+      };
+
+      setEdges((eds) => addEdge(newEdge, eds));
+    },
+    [nodes, edges]
   );
 
   // 添加删除节点的处理函数
-  const handleDelete = useCallback(
-    (id) => {
-      setNodes((nodes) => nodes.filter((node) => node.id !== id));
-      setEdges((edges) =>
-        edges.filter((edge) => edge.source !== id && edge.target !== id)
-      );
-    },
-    [setNodes, setEdges]
-  );
+  const handleDelete = (id) => {
+    console.log("Delete node:", id);
+    setNodes((nodes) => nodes.filter((node) => node.id !== id));
+    setEdges((edges) =>
+      edges.filter((edge) => edge.source !== id && edge.target !== id)
+    );
+  };
 
   // 添加设置节点的处理函数
   const handleSettings = useCallback((id) => {
@@ -181,7 +160,7 @@ const Flow = () => {
     // 这里可以添加打开设置面板的逻辑
   }, []);
 
-  // 添加自动布局按钮的处理函数
+  // 修改 onLayout，添加正确的依赖项
   const onLayout = useCallback(() => {
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
       nodes,
@@ -189,20 +168,82 @@ const Flow = () => {
     );
     setNodes([...layoutedNodes]);
     setEdges([...layoutedEdges]);
-  }, [nodes, edges]);
+  }, [nodes, edges, setNodes, setEdges]); // 添加所有必要的依赖项
 
+  // 修改 useEffect，移除自动布局
   useEffect(() => {
-    onLayout();
-  }, []); // 仅在组件挂载时执行一次
+    // 仅在首次加载时执行一次布局
+    const timer = setTimeout(() => {
+      onLayout();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []); // 仅在组件挂载时执行
+
+  // 添加节点计数器 state
+  const [nodeCount, setNodeCount] = useState({
+    agent: initialNodes.filter((n) => n.type === "agent").length,
+    tool: initialNodes.filter((n) => n.type === "tool").length,
+  });
+
+  // 修改添加节点函数，移除自动布局
+  const addAgentNode = useCallback(() => {
+    const newNode = {
+      id: `agent-${nodeCount.agent + 1}`,
+      type: "agent",
+      position: { x: Math.random() * 500, y: Math.random() * 500 }, // 随机位置
+
+      data: {
+        name: `Agent ${nodeCount.agent + 1}`,
+        description: "新建 Agent",
+        systemMessage: "",
+        modelName: "gpt-4",
+        onDelete: handleDelete,
+      },
+    };
+
+    setNodes((nodes) => [...nodes, newNode]);
+    setNodeCount((prev) => ({ ...prev, agent: prev.agent + 1 }));
+  }, [nodeCount, setNodes, handleDelete]);
+
+  const addToolNode = useCallback(() => {
+    const newNode = {
+      id: `tool-${nodeCount.tool + 1}`,
+      type: "tool",
+      position: { x: Math.random() * 500, y: Math.random() * 500 },
+      data: {
+        name: `工具 ${nodeCount.tool + 1}`,
+        description: "工具",
+        type: "custom_tool",
+        args: {},
+        onDelete: handleDelete,
+        onSettings: handleSettings,
+      },
+    };
+
+    setNodes((nodes) => [...nodes, newNode]);
+    setNodeCount((prev) => ({ ...prev, tool: prev.tool + 1 }));
+  }, [nodeCount, setNodes, handleDelete, handleSettings]);
 
   return (
-    <div className="w-full h-[800px]">
-      <div className="absolute top-4 left-4 z-10">
-        <button
+    <div className="w-full h-screen">
+      <div className="absolute top-4 left-4 z-10 flex gap-2">
+        {/* <button
           onClick={onLayout}
           className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
         >
-          自动布局
+          布局
+        </button> */}
+        <button
+          onClick={addAgentNode}
+          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+        >
+          Agent
+        </button>
+        <button
+          onClick={addToolNode}
+          className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
+        >
+          工具
         </button>
       </div>
       <ReactFlow
@@ -214,7 +255,6 @@ const Flow = () => {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         defaultViewport={{ x: 0, y: 0, zoom: 0.6 }}
-        // fitView
         fitViewOptions={{
           padding: 0.2,
           minZoom: 0.5,

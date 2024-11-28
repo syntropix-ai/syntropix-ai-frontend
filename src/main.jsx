@@ -11,11 +11,10 @@ AOS.init({
   easing: 'ease-in-out',
 })
 
-createRoot(document.getElementById('root')).render(
-
+createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename="/syntropix-ai-frontend">
       <App />
     </BrowserRouter>
-  </StrictMode>,
-)
+  </StrictMode>
+);

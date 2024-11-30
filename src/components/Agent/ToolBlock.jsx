@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Handle, NodeResizer } from '@xyflow/react';
 import { motion } from 'framer-motion';
 import { IoClose, IoSettings } from 'react-icons/io5';
@@ -11,29 +11,27 @@ const ToolBlock = ({ selected, data, id, onDelete, onSettings }) => {
   const [args, setArgs] = useState(data.args || {});
   const type = data.type || "default_tool_type"; // 不可修改的类型
   
-  const STATUS = {
-    IDLE: 1,
-    RUNNING: 2,
-    FAILED: 3,
-    SUCCESS: 4
-  };
-  
-  const [status, setStatus] = useState(data.status || STATUS.IDLE);
+  const [status, setStatus] = useState(data.status || "idle");
   
   const [width, setWidth] = useState(data.width || 384);
   const [height, setHeight] = useState(data.height || "auto");
   const [isResizing, setIsResizing] = useState(false);
 
+  useEffect(() => {
+    if (data.status !== status) {
+      setStatus(data.status);
+    }
+  }, [data.status]);
+
   const StatusIcon = () => {
-    switch (status) {
-      case STATUS.RUNNING:
-        return <BiLoaderAlt className="animate-spin text-blue-500" />;
-      case STATUS.FAILED:
-        return <BiError className="text-red-500" />;
-      case STATUS.SUCCESS:
-        return <BiCheck className="text-green-500" />;
-      default:
-        return <BsCircle className="text-gray-400" />;
+    if (status === "running") {
+      return <BiLoaderAlt className="animate-spin text-blue-500" />;
+    } else if (status === "failed") {
+      return <BiError className="text-red-500" />;
+    } else if (status === "success") {
+      return <BiCheck className="text-green-500" />;
+    } else {
+      return <BsCircle className="text-gray-400" />;
     }
   };
 
@@ -44,13 +42,26 @@ const ToolBlock = ({ selected, data, id, onDelete, onSettings }) => {
     }));
   };
 
+  const getGlowStyle = (status) => {
+    switch (status) {
+      case "running":
+        return "shadow-[0_0_25px_rgba(59,130,246,0.7)] border-blue-500"; // 蓝光
+      case "success":
+        return "shadow-[0_0_25px_rgba(34,197,94,0.7)] border-green-500";  // 绿光
+      case "failed":
+        return "shadow-[0_0_25px_rgba(239,68,68,0.7)] border-red-500";  // 红光
+      default:
+        return "shadow-md border-gray-200"; // 默认状态
+    }
+  };
+
   return (
     <motion.div
       initial={{ scale: 0.8, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       whileHover={{ scale: 1.02 }}
       transition={{ duration: 0.2 }}
-      className="relative w-[24rem] bg-white rounded-lg shadow-lg border-2 border-gray-200 hover:border-green-400 transition-colors"
+      className={`relative w-[24rem] bg-white rounded-lg border-2 hover:border-green-400 transition-colors ${getGlowStyle(status)}`}
       style={{ width, height: isResizing ? height : "auto" }}
     >
       {selected && (
@@ -83,7 +94,7 @@ const ToolBlock = ({ selected, data, id, onDelete, onSettings }) => {
         <input
           type="text"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {setName(e.target.value); data.name = e.target.value;}}
           className="bg-transparent border-none outline-none flex-1"
         />
         <StatusIcon />
@@ -131,7 +142,7 @@ const ToolBlock = ({ selected, data, id, onDelete, onSettings }) => {
           <label className="text-xs text-gray-500">Description</label>
           <textarea
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => {setDescription(e.target.value); data.description = e.target.value;}}
             className="w-full resize-none h-16 px-2 py-1 border rounded text-sm"
           />
         </div>
@@ -145,7 +156,7 @@ const ToolBlock = ({ selected, data, id, onDelete, onSettings }) => {
                 <input
                   type="text"
                   value={value}
-                  onChange={(e) => handleArgChange(key, e.target.value)}
+                  onChange={(e) => {handleArgChange(key, e.target.value); data.args[key] = e.target.value;}}
                   className="flex-1 px-2 py-1 border rounded text-sm"
                 />
               </div>

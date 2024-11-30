@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Handle, NodeResizer } from "@xyflow/react";
 import { motion } from "framer-motion";
 import { IoClose, IoSettings } from "react-icons/io5";
@@ -14,37 +14,49 @@ const AgentBlock = ({ selected, data, id, onDelete, onSettings }) => {
 
   const modelName = "gpt-4";
 
-  const STATUS = {
-    IDLE: 1,
-    RUNNING: 2,
-    FAILED: 3,
-    SUCCESS: 4,
-  };
-
   const statusStyles = {
-    [STATUS.IDLE]: { color: "gray", borderColor: "gray-200" },
-    [STATUS.RUNNING]: { color: "blue", borderColor: "blue-400" },
-    [STATUS.FAILED]: { color: "red", borderColor: "red-400" },
-    [STATUS.SUCCESS]: { color: "green", borderColor: "green-400" },
+    idle: { color: "gray", borderColor: "gray-200" },
+    running: { color: "blue", borderColor: "blue-400" },
+    failed: { color: "red", borderColor: "red-400" },
+    success: { color: "green", borderColor: "green-400" },
   };
 
-  const [status, setStatus] = useState(data.status || STATUS.SUCCESS);
+  const [status, setStatus] = useState(data.status || "idle");
+  useEffect(() => {
+    if (data.status !== status) {
+      setStatus(data.status);
+    }
+  }, [data.status]);
 
   const StatusIcon = () => {
-    switch (status) {
-      case STATUS.RUNNING:
-        return <BiLoaderAlt className="animate-spin text-blue-500" />;
-      case STATUS.FAILED:
-        return <BiError className="text-red-500" />;
-      case STATUS.SUCCESS:
-        return <BiCheck className="text-green-500" />;
-      default:
-        return <BsCircle className="text-gray-400" />;
+    
+    if (status === "running") {
+      return <BiLoaderAlt className="animate-spin text-blue-500" />;
+    } else if (status === "failed") {
+      return <BiError className="text-red-500" />;
+    } else if (status === "success") {
+      return <BiCheck className="text-green-500" />;
+    } else {
+      return <BsCircle className="text-gray-400" />;
     }
+
   };
 
   // 判断是否正在调整大小
   const [isResizing, setIsResizing] = useState(false);
+
+  const getGlowStyle = (status) => {
+    switch (status) {
+      case "running":
+        return "!shadow-[0_0_25px_rgba(59,130,246,0.7)] border-blue-400"; // 使用 !important
+      case "success":
+        return "!shadow-[0_0_25px_rgba(34,197,94,0.7)] border-green-400";
+      case "failed":
+        return "!shadow-[0_0_25px_rgba(239,68,68,0.7)] border-red-400";
+      default:
+        return "!shadow-md border-gray-200";
+    }
+  };
 
   return (
     <motion.div
@@ -52,14 +64,13 @@ const AgentBlock = ({ selected, data, id, onDelete, onSettings }) => {
       animate={{
         scale: 1,
         opacity: 1,
-        borderColor: `var(--tw-${statusStyles[status].borderColor})`,
       }}
       whileHover={{ scale: 1.02 }}
       transition={{ duration: 0.2 }}
-      className={`relative bg-white rounded-lg shadow-lg border-2 transition-colors ${
+      className={`relative bg-white rounded-lg border-2 transition-all ${
         selected ? "border-dashed" : ""
-      }`}
-      style={{ width, height: isResizing ? height : "auto" }} // 当调整大小时，使用固定高度
+      } ${getGlowStyle(status)}`}
+      style={{ width, height: isResizing ? height : "auto" }}
     >
       {selected && (
         <NodeResizer
@@ -95,7 +106,10 @@ const AgentBlock = ({ selected, data, id, onDelete, onSettings }) => {
         <input
           type="text"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            setName(e.target.value);
+            data.name = e.target.value;
+          }}
           className="bg-transparent border-none outline-none flex-1"
         />
         <StatusIcon />
@@ -144,7 +158,10 @@ const AgentBlock = ({ selected, data, id, onDelete, onSettings }) => {
           <label className="text-xs text-gray-500">Description</label>
           <textarea
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => {
+              setDescription(e.target.value);
+              data.description = e.target.value;
+            }}
             className="w-full resize-none px-2 py-1 border rounded text-sm"
             style={{ height: "4rem" }} // 使用内联样式设置高度
           />
@@ -154,7 +171,10 @@ const AgentBlock = ({ selected, data, id, onDelete, onSettings }) => {
           <label className="text-xs text-gray-500">System Message</label>
           <textarea
             value={systemMessage}
-            onChange={(e) => setSystemMessage(e.target.value)}
+            onChange={(e) => {
+              setSystemMessage(e.target.value);
+              data.systemMessage = e.target.value;
+            }}
             className="w-full resize-none px-2 py-1 border rounded text-sm"
             style={{ height: "5rem" }} // 使用内联样式设置高度
           />

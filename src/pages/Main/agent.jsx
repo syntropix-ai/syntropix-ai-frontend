@@ -1,11 +1,14 @@
-import Flow from "../../components/Agent/Flow";
+import React, { useRef } from 'react';
+import Flow from '../../components/Agent/Flow';
 import InputTextArea from "../../components/Agent/InputTextArea";
 import { useState, useCallback, useEffect } from "react";
+import { convertFlowToConfig } from '../../components/Agent/utils';
 
 const Agent = () => {
   const [splitPosition, setSplitPosition] = useState(50);
   const [activeTab, setActiveTab] = useState("chat");
   const [isDragging, setIsDragging] = useState(false);
+  const flowRef = useRef(null);
 
   // 处理拖动逻辑
   const handleMouseDown = useCallback(() => {
@@ -46,14 +49,60 @@ const Agent = () => {
     // 可以添加更多标签页
   ];
 
+  const handleStreamResponse = async () => {
+    flowRef.current?.resetNodeStatuses();
+    const eventSource = new EventSource("http://localhost:8000/");
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      // console.log(data);
+      flowRef.current?.updateNodeStatuses(data);
+    };
+    eventSource.onerror = (event) => {
+      // console.error('EventSource failed:', event);
+      eventSource.close();
+    };
+
+  };
+
   return (
     <div className="flex h-[85vh] w-[90vw] overflow-x-hidden">
       {/* 左侧Flow区域 */}
       <div
-        className="h-full overflow-hidden"
+        className="h-full overflow-hidden relative"
         style={{ width: `${splitPosition}%` }}
       >
-        <Flow />
+        {/* 将按钮移到这里，使用绝对定位居中 */}
+        <div className="absolute left-1/2 top-4 transform -translate-x-1/2 flex gap-2 z-10">
+          <button
+            onClick={() => {
+              const config = convertFlowToConfig(flowRef.current);
+              console.log(JSON.stringify(config, null, 2));
+              
+              flowRef.current?.onLayout();
+            }}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 shadow-lg"
+          >
+            布局
+          </button>
+          <button className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 shadow-lg"
+            onClick={() => flowRef.current?.addAgentNode()}
+          >
+            Agent
+          </button>
+          <button
+            onClick={() => flowRef.current?.addToolNode()}
+            className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 shadow-lg"
+          >
+            工具
+          </button>
+          <button
+            onClick={handleStreamResponse}
+            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 shadow-lg"
+          >
+            运行
+          </button>
+        </div>
+        <Flow ref={flowRef} />
       </div>
 
       {/* 可拖动的分隔条 */}
